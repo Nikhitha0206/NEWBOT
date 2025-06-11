@@ -29,7 +29,7 @@ const DEFAULT_PYTHON_SERVICE_URL = 'http://localhost:5001';
 let port = process.env.PORT || DEFAULT_PORT;
 let mongoUri = process.env.MONGO_URI || ''; // Will prompt if empty and .env doesn't provide
 // MODIFIED: Use PYTHON_AI_CORE_SERVICE_URL from .env
-let pythonServiceUrl = process.env.PYTHON_AI_CORE_SERVICE_URL || ''; // Will prompt if empty and .env doesn't provide
+let pythonServiceUrl = process.env.PYTHON_AI_CORE_SERVICE_URL || 'http://localhost:5001'; // Updated default to 5001
 let geminiApiKey = process.env.GEMINI_API_KEY || ''; // MUST be set via environment
 
 // --- Express Application Setup ---
@@ -42,6 +42,8 @@ app.use(express.json());
 // --- Basic Root Route ---
 app.get('/', (req, res) => res.send('Chatbot Backend API is running...'));
 
+const duckduckgoRouter = require('./routes/duckduckgo');
+
 // --- API Route Mounting ---
 app.use('/api/network', require('./routes/network'));
 app.use('/api/auth', require('./routes/auth'));
@@ -50,6 +52,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/files', require('./routes/files'));
 app.use('/api/syllabus', require('./routes/syllabus'));
 app.use('/api/analysis', analysisRoutes); // <<<--- AND MOUNTED IT HERE
+app.use('/api/duckduckgo', duckduckgoRouter);
 
 // --- Centralized Error Handling Middleware ---
 app.use((err, req, res, next) => {

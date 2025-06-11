@@ -4,11 +4,16 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const algorithm = 'aes-256-cbc'; // Using a standard and secure algorithm
-const key = Buffer.from(process.env.API_ENCRYPTION_KEY, 'hex'); // The key must be 32 bytes (256 bits)
 
 // Security check: Ensure the encryption key is loaded.
-if (!process.env.API_ENCRYPTION_KEY || key.length !== 32) {
-  throw new Error('FATAL ERROR: API_ENCRYPTION_KEY is not defined or is not a 64-character hex string. Please check your .env file.');
+if (!process.env.API_ENCRYPTION_KEY) {
+  throw new Error('FATAL ERROR: API_ENCRYPTION_KEY is not defined. Please check your .env file.');
+}
+
+const key = Buffer.from(process.env.API_ENCRYPTION_KEY, 'hex'); // The key must be 32 bytes (256 bits)
+
+if (key.length !== 32) {
+  throw new Error('FATAL ERROR: API_ENCRYPTION_KEY is not a 64-character hex string. Please check your .env file.');
 }
 
 const IV_LENGTH = 16; // For AES, this is always 16

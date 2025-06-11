@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Dynamically determine API Base URL
 const getApiBaseUrl = () => {
-    const backendPort = process.env.REACT_APP_BACKEND_PORT || 5003; // Default to 5003
+const backendPort = process.env.REACT_APP_BACKEND_PORT || 5000;
     const hostname = window.location.hostname;
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     const backendHost = (hostname === 'localhost' || hostname === '127.0.0.1')

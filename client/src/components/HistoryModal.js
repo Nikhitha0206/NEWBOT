@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { getChatSessions, getSessionDetails } from '../services/api';
 
-const HistoryModal = ({ isOpen, onClose }) => {
+const HistoryModal = ({ isOpen, onClose, onSessionSelect }) => {
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
@@ -67,6 +67,9 @@ const HistoryModal = ({ isOpen, onClose }) => {
       // Interceptor adds user ID
       const response = await getSessionDetails(sessionId);
       setSelectedSession(response.data);
+      if (onSessionSelect) {
+          onSessionSelect(response.data);
+      }
     } catch (err) {
       console.error(`Error fetching session ${sessionId}:`, err);
       setError(err.response?.data?.message || `Failed to load details for session ${sessionId}.`);

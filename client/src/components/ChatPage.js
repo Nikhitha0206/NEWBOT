@@ -1,6 +1,7 @@
 // client/src/components/ChatPage.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
     sendMessage,
     saveChatHistory,
@@ -16,6 +17,7 @@ import HistoryModal from './HistoryModal';
 import FileUploadWidget from './FileUploadWidget';
 import FileManagerWidget from './FileManagerWidget';
 import AnalysisResultModal from './AnalysisResultModal';
+import ChatDownloadPdfButton from './ChatDownloadPdfButton';
 
 import './ChatPage.css';
 
@@ -213,6 +215,61 @@ const ChatPage = ({ setIsAuthenticated }) => {
             return;
         }
 
+        // Detect DuckDuckGo search command: e.g., "/ddg search terms"
+        const ddgCommandPrefix = '/ddg ';
+        if (textToSend.toLowerCase().startsWith(ddgCommandPrefix)) {
+            const searchQuery = textToSend.substring(ddgCommandPrefix.length).trim();
+            if (!searchQuery) {
+                setError("DuckDuckGo search query cannot be empty.");
+                return;
+            }
+            setIsLoading(true);
+            setError('');
+            try {
+                const response = await axios.get(`/api/duckduckgo/search?q=${encodeURIComponent(searchQuery)}`);
+                const data = response.data;
+                // Format search results into a message
+                let resultText = `**DuckDuckGo Search Results for:** "${searchQuery}"\n\n`;
+                if (data.heading) {
+                    resultText += `# ${data.heading}\n\n`;
+                }
+                if (data.abstractText) {
+                    resultText += `${data.abstractText}\n\n`;
+                }
+                if (data.abstractURL) {
+                    resultText += `[Read more](${data.abstractURL})\n\n`;
+                }
+                if (data.relatedTopics && data.relatedTopics.length > 0) {
+                    resultText += '### Related Topics:\n';
+                    data.relatedTopics.slice(0, 5).forEach(topic => {
+                        if (topic.Text) {
+                            resultText += `- ${topic.Text}\n`;
+                        } else if (topic.Topics) {
+                            topic.Topics.slice(0, 3).forEach(subTopic => {
+                                if (subTopic.Text) {
+                                    resultText += `- ${subTopic.Text}\n`;
+                                }
+                            });
+                        }
+                    });
+                }
+                const searchResultMessage = {
+                    role: 'model',
+                    parts: [{ text: resultText }],
+                    timestamp: new Date().toISOString()
+                };
+                setMessages(prev => [...prev, searchResultMessage]);
+            } catch (err) {
+                const errorMessage = err.response?.data?.message || err.message || 'Failed to get DuckDuckGo search results.';
+                setError(`DuckDuckGo Search Error: ${errorMessage}`);
+                console.error("DuckDuckGo Search Error:", err);
+            } finally {
+                setIsLoading(false);
+            }
+            setInputText('');
+            return;
+        }
+
         const newUserMessage = {
             role: 'user',
             parts: [{ text: textToSend }],
@@ -359,13 +416,14 @@ const ChatPage = ({ setIsAuthenticated }) => {
             <div className="chat-container">
                  <header className="chat-header">
                     <h1>FusedChat: AI Core Integration</h1>
-                    <div className="header-controls">
-                        <span className="username-display">Hi, {username}!</span>
-                        <button onClick={handleHistory} className="header-button history-button" disabled={isProcessing}>History</button>
-                        <button onClick={handleNewChat} className="header-button newchat-button" disabled={isProcessing}>New Chat</button>
-                        <button onClick={() => handleLogout(false)} className="header-button logout-button" disabled={isProcessing}>Logout</button>
-                    </div>
-                </header>
+            <div className="header-controls">
+                <span className="username-display">Hi, {username}!</span>
+                <button onClick={handleHistory} className="header-button history-button" disabled={isProcessing}>History</button>
+                <button onClick={handleNewChat} className="header-button newchat-button" disabled={isProcessing}>New Chat</button>
+                <ChatDownloadPdfButton messages={messages} />
+                <button onClick={() => handleLogout(false)} className="header-button logout-button" disabled={isProcessing}>Logout</button>
+            </div>
+        </header>
 
                  <div className="messages-area">
                     {messages.map((msg, index) => {
@@ -437,7 +495,14 @@ const ChatPage = ({ setIsAuthenticated }) => {
                 </footer>
             </div>
 
-            <HistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} />
+            <HistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} onSessionSelect={(session) => {
+                if (session && session.sessionId && Array.isArray(session.messages)) {
+                    setMessages(session.messages);
+                    setSessionId(session.sessionId);
+                    localStorage.setItem('sessionId', session.sessionId);
+                    setIsHistoryModalOpen(false);
+                }
+            }} />
 
             {analysisModalData && (
                 <AnalysisResultModal
